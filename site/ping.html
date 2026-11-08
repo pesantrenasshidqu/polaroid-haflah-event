@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uji Koneksi API</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#faf6ec;color:#2b2a26;margin:0;padding:16px;max-width:640px;margin-inline:auto}
+  h1{font-size:1.25rem}
+  button,select{font-size:1rem;padding:14px;margin:6px 6px 6px 0;border-radius:10px;border:1px solid #8a7f68;background:#fff}
+  button{background:#3f6b4f;color:#fff;border:0}
+  pre{background:#fff;border:1px solid #ddd3bd;border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-word;font-size:.85rem}
+  .ok{color:#2e7d32}.bad{color:#b3261e}
+  small{color:#6b6454}
+</style>
+</head>
+<body>
+<h1>Uji Koneksi GitHub Pages &rarr; Apps Script</h1>
+<p><small id="ua"></small></p>
+
+<button id="b-get">Ping (GET)</button>
+<button id="b-post">Ping (POST)</button>
+<div>
+  <select id="size">
+    <option value="102400">100 KB</option>
+    <option value="1048576" selected>1 MB</option>
+    <option value="2097152">2 MB</option>
+    <option value="4194304">4 MB</option>
+    <option value="7340032">7 MB</option>
+  </select>
+  <button id="b-payload">Uji ukuran POST</button>
+</div>
+
+<pre id="out">Siap. Tekan salah satu tombol.</pre>
+
+<script src="js/config.js"></script>
+<script src="js/api/client.js"></script>
+<script>
+  const out = document.getElementById('out');
+  document.getElementById('ua').textContent = navigator.userAgent;
+
+  function log(line, cls) {
+    const t = new Date().toLocaleTimeString();
+    out.textContent = '[' + t + '] ' + line + '\n' + out.textContent;
+  }
+
+  async function run(label, fn) {
+    const t0 = performance.now();
+    try {
+      const data = await fn();
+      log('OK  ' + label + ' (' + Math.round(performance.now() - t0) + ' ms)\n' + JSON.stringify(data, null, 2));
+    } catch (e) {
+      log('GAGAL ' + label + ' (' + Math.round(performance.now() - t0) + ' ms)\n' +
+        e.code + ': ' + e.message + (e.detail ? '\n' + e.detail : ''));
+    }
+  }
+
+  document.getElementById('b-get').onclick = function () {
+    run('GET ping', function () { return ApiClient.request('ping', { echo: 'halo-get' }, { method: 'GET' }); });
+  };
+  document.getElementById('b-post').onclick = function () {
+    run('POST ping', function () { return ApiClient.request('ping', { echo: 'halo-post' }); });
+  };
+  document.getElementById('b-payload').onclick = function () {
+    const n = parseInt(document.getElementById('size').value, 10);
+    const blob = 'A'.repeat(n);
+    run('POST payload ' + (n / 1024) + ' KB', function () {
+      return ApiClient.request('payloadTest', { blob: blob }, { timeoutMs: 60000 });
+    });
+  };
+</script>
+</body>
+</html>

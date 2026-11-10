@@ -20,6 +20,8 @@
 
 <button id="b-get">Ping (GET)</button>
 <button id="b-post">Ping (POST)</button>
+<button id="b-health">Cek kesehatan sistem</button>
+<button id="b-config">Ambil konfigurasi publik</button>
 <div>
   <select id="size">
     <option value="102400">100 KB</option>
@@ -60,6 +62,12 @@
   };
   document.getElementById('b-post').onclick = function () {
     run('POST ping', function () { return ApiClient.request('ping', { echo: 'halo-post' }); });
+  };
+  document.getElementById('b-health').onclick = function () {
+    run('GET health', function () { return ApiClient.request('health', {}, { method: 'GET' }); });
+  };
+  document.getElementById('b-config').onclick = function () {
+    run('GET getPublicConfig', function () { return ApiClient.request('getPublicConfig', {}, { method: 'GET' }); });
   };
   document.getElementById('b-payload').onclick = function () {
     const n = parseInt(document.getElementById('size').value, 10);

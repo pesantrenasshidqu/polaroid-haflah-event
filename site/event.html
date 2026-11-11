@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kirim Foto</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:system-ui,sans-serif;background:#faf6ec;color:#2b2a26;margin:0;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+  h1{font-size:1.4rem;margin:0 0 4px}
+  .sub{color:#6b6454;font-size:.9rem;margin:0 0 20px}
+  input[type=text]{width:100%;padding:14px;border:1px solid #c9bfa8;border-radius:12px;font-size:1rem;background:#fff;margin-bottom:12px}
+  .btn{display:block;width:100%;padding:16px;border:0;border-radius:14px;font-size:1.1rem;font-weight:600;cursor:pointer;margin-bottom:10px}
+  .btn-primary{background:#3f6b4f;color:#fff}
+  .btn-secondary{background:#fff;color:#3f6b4f;border:2px solid #3f6b4f}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  #preview-wrap{display:none;margin-bottom:16px}
+  #preview{width:100%;max-height:320px;object-fit:contain;border-radius:12px;border:1px solid #ddd3bd}
+  #status{margin-top:12px;text-align:center;font-size:.95rem;min-height:24px}
+  .ok{color:#2e7d32;font-weight:600}.bad{color:#b3261e}
+  .hidden{display:none}
+  #success-box{text-align:center;padding:32px 16px}
+  #success-box h2{font-size:1.5rem;color:#3f6b4f;margin:0 0 8px}
+  progress{width:100%;height:8px;border-radius:4px;margin:8px 0}
+</style>
+</head>
+<body>
+<div id="main-box" style="width:100%;max-width:480px">
+  <h1 id="event-name">Memuat…</h1>
+  <p class="sub" id="event-loc"></p>
+
+  <input type="text" id="inp-name" placeholder="Nama Anda (opsional)" maxlength="50">
+
+  <label class="btn btn-primary" style="text-align:center;cursor:pointer">
+    📷 Ambil Foto
+    <input type="file" accept="image/*" capture="environment" id="inp-camera" class="hidden">
+  </label>
+  <label class="btn btn-secondary" style="text-align:center;cursor:pointer">
+    🖼️ Pilih dari Galeri
+    <input type="file" accept="image/*" id="inp-gallery" class="hidden">
+  </label>
+
+  <div id="preview-wrap">
+    <img id="preview" alt="Pratinjau foto">
+    <input type="text" id="inp-caption" placeholder="Caption (opsional)" maxlength="140">
+    <progress id="prog" value="0" max="100" class="hidden"></progress>
+    <button class="btn btn-primary" id="btn-send">✉️ Kirim Foto</button>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<div id="success-box" class="hidden">
+  <div style="font-size:3rem">📸</div>
+  <h2>FOTO BERHASIL DIKIRIM!</h2>
+  <p>Terima kasih telah berbagi momen bersama kami.</p>
+  <button class="btn btn-secondary" id="btn-again">Kirim Foto Lagi</button>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api/client.js"></script>
+<script src="js/modules/upload/compress.js"></script>
+<script src="js/modules/upload/uploader.js"></script>
+<script>
+(function(){
+  var params  = new URLSearchParams(location.search);
+  var slug    = params.get('e') || '';
+  var qrId    = params.get('q') || '';
+  var eventId = '';
+  var pubCfg  = {};
+  var selectedFile = null;
+
+  var status    = document.getElementById('status');
+  var previewW  = document.getElementById('preview-wrap');
+  var preview   = document.getElementById('preview');
+  var prog      = document.getElementById('prog');
+  var btnSend   = document.getElementById('btn-send');
+  var mainBox   = document.getElementById('main-box');
+  var successBox= document.getElementById('success-box');
+
+  function setStatus(msg, cls) {
+    status.textContent = msg;
+    status.className   = cls || '';
+  }
+
+  // Muat info acara
+  (async function(){
+    if (!slug) { setStatus('QR Code tidak valid (parameter acara tidak ditemukan).','bad'); return; }
+    try {
+      var ev = await ApiClient.request('getEvent',{slug:slug,qr_id:qrId},{method:'GET'});
+      document.getElementById('event-name').textContent = ev.event_name;
+      document.getElementById('event-loc').textContent  = ev.event_location;
+      eventId = ev.event_id;
+    } catch(e) {
+      setStatus(e.message,'bad');
+      document.getElementById('event-name').textContent = 'Gagal memuat acara';
+    }
+    try {
+      pubCfg = await ApiClient.request('getPublicConfig',{},{method:'GET'});
+    } catch(e) {}
+  })();
+
+  function handleFile(file) {
+    if (!file) return;
+    selectedFile = file;
+    var url = URL.createObjectURL(file);
+    preview.src = url;
+    previewW.style.display = 'block';
+    setStatus('');
+  }
+
+  document.getElementById('inp-camera').onchange  = function(){ handleFile(this.files[0]); };
+  document.getElementById('inp-gallery').onchange = function(){ handleFile(this.files[0]); };
+
+  btnSend.onclick = async function(){
+    if (!selectedFile) { setStatus('Pilih foto terlebih dahulu.','bad'); return; }
+    if (!eventId)      { setStatus('Acara belum dimuat. Muat ulang halaman.','bad'); return; }
+    btnSend.disabled = true;
+    prog.classList.remove('hidden');
+    try {
+      await PhotoUploader.uploadPhoto(selectedFile, {
+        event_id:      eventId,
+        qr_id:         qrId,
+        uploader_name: document.getElementById('inp-name').value.trim(),
+        caption:       document.getElementById('inp-caption').value.trim()
+      }, pubCfg, function(pct, msg){
+        prog.value = pct;
+        setStatus(msg);
+      });
+      mainBox.classList.add('hidden');
+      successBox.classList.remove('hidden');
+    } catch(e) {
+      setStatus(e.message,'bad');
+      btnSend.disabled = false;
+    }
+  };
+
+  document.getElementById('btn-again').onclick = function(){
+    selectedFile = null;
+    preview.src  = '';
+    previewW.style.display = 'none';
+    prog.value   = 0;
+    prog.classList.add('hidden');
+    document.getElementById('inp-name').value    = '';
+    document.getElementById('inp-caption').value = '';
+    btnSend.disabled = false;
+    setStatus('');
+    mainBox.classList.remove('hidden');
+    successBox.classList.add('hidden');
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Uji Upload Foto</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#faf6ec;color:#2b2a26;margin:0;padding:16px;max-width:640px;margin-inline:auto}
+  h1{font-size:1.1rem}
+  input,button,select{font-size:1rem;padding:10px;margin:4px 4px 4px 0;border-radius:8px;border:1px solid #8a7f68}
+  button{background:#3f6b4f;color:#fff;border:0;cursor:pointer}
+  pre{background:#fff;border:1px solid #ddd3bd;border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-word;font-size:.82rem;max-height:400px;overflow-y:auto}
+  progress{width:100%;height:8px;border-radius:4px}
+  label{display:block;margin:8px 0 2px;font-weight:600}
+</style>
+</head>
+<body>
+<h1>Uji Upload Foto (Admin)</h1>
+<label>event_id</label>
+<input id="i-event" placeholder="evt_xxxxxxxx" style="width:100%">
+<label>qr_id</label>
+<input id="i-qr" placeholder="abcd1234" style="width:100%">
+<label>Pilih foto</label>
+<input type="file" accept="image/*" id="i-file">
+<br><br>
+<button id="b-up">Upload</button>
+<progress id="prog" value="0" max="100"></progress>
+<pre id="out">Siap.</pre>
+
+<script src="js/config.js"></script>
+<script src="js/api/client.js"></script>
+<script src="js/modules/upload/compress.js"></script>
+<script src="js/modules/upload/uploader.js"></script>
+<script>
+document.getElementById('b-up').onclick = async function(){
+  var file = document.getElementById('i-file').files[0];
+  if(!file){document.getElementById('out').textContent='Pilih file dulu.';return;}
+  var t0=performance.now();
+  try{
+    var d=await PhotoUploader.uploadPhoto(file,{
+      event_id:document.getElementById('i-event').value.trim(),
+      qr_id:document.getElementById('i-qr').value.trim(),
+      uploader_name:'Test Admin',caption:'Uji upload'
+    },{image_max_dimension:1600,thumbnail_dimension:480,image_quality:0.8},
+    function(pct,msg){
+      document.getElementById('prog').value=pct;
+      document.getElementById('out').textContent=msg;
+    });
+    document.getElementById('out').textContent='OK ('+Math.round(performance.now()-t0)+' ms)\n'+JSON.stringify(d,null,2);
+  }catch(e){
+    document.getElementById('out').textContent='GAGAL: '+e.code+': '+e.message;
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Admin</title>
+<style>
+:root{--green:#3f6b4f;--cream:#faf6ec;--white:#fff;--border:#ddd3bd;--text:#2b2a26;--muted:#6b6454;--red:#b3261e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
+nav{background:var(--green);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+nav a{color:#fff;text-decoration:none;margin-left:16px;font-size:.9rem;opacity:.85}
+nav a:hover{opacity:1}
+.container{max-width:900px;margin:0 auto;padding:24px 16px}
+h2{font-size:1.3rem;margin-bottom:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:28px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-card .num{font-size:2rem;font-weight:700;color:var(--green)}
+.stat-card .lbl{font-size:.8rem;color:var(--muted);margin-top:4px}
+.btn{padding:10px 18px;border:0;border-radius:8px;font-size:.95rem;cursor:pointer;background:var(--green);color:#fff}
+.btn-sm{padding:6px 12px;font-size:.82rem}
+.btn-danger{background:var(--red)}
+.btn-outline{background:transparent;border:1px solid var(--green);color:var(--green)}
+#login-box{max-width:360px;margin:80px auto;background:var(--white);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center}
+#login-box h2{margin-bottom:20px}
+#main-box{display:none}
+#logout-btn{font-size:.85rem;cursor:pointer;background:transparent;border:0;color:#fff;opacity:.8}
+#logout-btn:hover{opacity:1}
+</style>
+<script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body>
+<div id="login-box">
+  <h2>🔐 Login Admin</h2>
+  <p style="color:var(--muted);font-size:.9rem;margin-bottom:20px">Gunakan akun Google yang terdaftar sebagai admin.</p>
+  <div id="g-btn"></div>
+  <p id="login-err" style="color:var(--red);font-size:.85rem;margin-top:12px"></p>
+</div>
+
+<div id="main-box">
+  <nav>
+    <span>📸 Polaroid Admin</span>
+    <span>
+      <a href="photos.html">Moderasi</a>
+      <a href="events.html">Acara</a>
+      <a href="qr.html">QR Code</a>
+      <button id="logout-btn">Keluar</button>
+    </span>
+  </nav>
+  <div class="container">
+    <h2>Ringkasan</h2>
+    <div class="stats" id="stats-grid">
+      <div class="stat-card"><div class="num" id="s-events">–</div><div class="lbl">Total Acara</div></div>
+      <div class="stat-card"><div class="num" id="s-active">–</div><div class="lbl">Acara Aktif</div></div>
+      <div class="stat-card"><div class="num" id="s-total">–</div><div class="lbl">Total Foto</div></div>
+      <div class="stat-card"><div class="num" id="s-pending" style="color:#e65100">–</div><div class="lbl">Menunggu</div></div>
+      <div class="stat-card"><div class="num" id="s-approved" style="color:var(--green)">–</div><div class="lbl">Disetujui</div></div>
+      <div class="stat-card"><div class="num" id="s-rejected" style="color:var(--red)">–</div><div class="lbl">Ditolak</div></div>
+    </div>
+    <a href="photos.html"><button class="btn">Moderasi Foto →</button></a>
+  </div>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api/client.js"></script>
+<script>
+var token = null;
+function saveToken(t){ token=t; try{sessionStorage.setItem('adm_tok',t);}catch(e){} }
+function loadToken(){ try{return sessionStorage.getItem('adm_tok');}catch(e){return null;} }
+
+async function tryLogin(t){
+  saveToken(t);
+  document.getElementById('login-err').textContent='Memverifikasi…';
+  try{
+    var d=await ApiClient.request('getDashboardStats',{token:t});
+    document.getElementById('login-box').style.display='none';
+    document.getElementById('main-box').style.display='block';
+    fillStats(d);
+  }catch(e){
+    document.getElementById('login-err').textContent=e.message;
+    saveToken(null);
+  }
+}
+
+function fillStats(d){
+  document.getElementById('s-events').textContent  = d.events_total;
+  document.getElementById('s-active').textContent  = d.events_active;
+  document.getElementById('s-total').textContent   = d.photos.total;
+  document.getElementById('s-pending').textContent = d.photos.pending;
+  document.getElementById('s-approved').textContent= d.photos.approved;
+  document.getElementById('s-rejected').textContent= d.photos.rejected;
+}
+
+document.getElementById('logout-btn').onclick=function(){
+  saveToken(null); try{sessionStorage.removeItem('adm_tok');}catch(e){}
+  document.getElementById('main-box').style.display='none';
+  document.getElementById('login-box').style.display='block';
+};
+
+window.addEventListener('load',function(){
+  // Coba token tersimpan
+  var t=loadToken();
+  if(t) tryLogin(t);
+
+  // Tombol Google Sign-In
+  google.accounts.id.initialize({
+    client_id: window.APP_CONFIG.GOOGLE_CLIENT_ID || '',
+    callback: function(resp){ tryLogin(resp.credential); }
+  });
+  google.accounts.id.renderButton(document.getElementById('g-btn'),
+    {theme:'outline',size:'large',text:'signin_with',locale:'id'});
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moderasi Foto</title>
+<style>
+:root{--green:#3f6b4f;--cream:#faf6ec;--white:#fff;--border:#ddd3bd;--text:#2b2a26;--muted:#6b6454;--red:#b3261e;--orange:#e65100}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--cream);color:var(--text)}
+nav{background:var(--green);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+nav a{color:#fff;text-decoration:none;margin-left:14px;font-size:.9rem;opacity:.85}
+.container{max-width:1100px;margin:0 auto;padding:20px 16px}
+h2{font-size:1.2rem;margin-bottom:14px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+select,input{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;background:var(--white)}
+.btn{padding:8px 14px;border:0;border-radius:7px;font-size:.85rem;cursor:pointer}
+.btn-green{background:var(--green);color:#fff} .btn-red{background:var(--red);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.photo-card{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.photo-card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#eee;cursor:pointer}
+.photo-card .info{padding:8px}
+.photo-card .name{font-weight:600;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.photo-card .meta{font-size:.75rem;color:var(--muted);margin:2px 0 6px}
+.photo-card .actions{display:flex;gap:4px;flex-wrap:wrap}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.72rem;font-weight:600}
+.badge-pending{background:#fff3e0;color:var(--orange)}
+.badge-approved{background:#e8f5e9;color:var(--green)}
+.badge-rejected{background:#fce4ec;color:var(--red)}
+.badge-deleted{background:#eee;color:#888}
+.spinner{width:32px;height:32px;border:3px solid #ddd;border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;margin:40px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+#msg{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:10px 18px;border-radius:10px;display:none;font-size:.9rem;z-index:99}
+</style>
+</head>
+<body>
+<nav>
+  <span>📸 Moderasi Foto</span>
+  <span><a href="index.html">Dashboard</a><a href="events.html">Acara</a><a href="qr.html">QR</a></span>
+</nav>
+<div class="container">
+  <div class="filters">
+    <select id="f-status">
+      <option value="PENDING">Menunggu</option>
+      <option value="APPROVED">Disetujui</option>
+      <option value="REJECTED">Ditolak</option>
+      <option value="">Semua</option>
+    </select>
+    <input id="f-event" placeholder="event_id (opsional)" style="width:200px">
+    <button class="btn btn-green" id="btn-load">Muat</button>
+  </div>
+  <div id="spinner" class="spinner"></div>
+  <div class="photo-grid" id="grid"></div>
+  <p id="empty" style="text-align:center;color:var(--muted);padding:40px;display:none">Tidak ada foto.</p>
+</div>
+<div id="msg"></div>
+
+<script src="../js/config.js"></script>
+<script src="../js/api/client.js"></script>
+<script>
+var token = null;
+try{ token = sessionStorage.getItem('adm_tok'); }catch(e){}
+if(!token){ location.href='index.html'; }
+
+function showMsg(t,ok){
+  var m=document.getElementById('msg');
+  m.textContent=t; m.style.background=ok?'#3f6b4f':'#b3261e'; m.style.display='block';
+  setTimeout(function(){m.style.display='none';},2500);
+}
+
+function badge(s){
+  var map={PENDING:'badge-pending',APPROVED:'badge-approved',REJECTED:'badge-rejected',DELETED:'badge-deleted'};
+  return '<span class="badge '+(map[s]||'')+'">'+s+'</span>';
+}
+
+function formatDate(iso){
+  try{return new Date(iso).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){return iso;}
+}
+
+async function doAction(action, photoId, cardEl){
+  var reason='';
+  if(action==='rejectPhoto'){ reason=prompt('Alasan penolakan (opsional):') || ''; }
+  cardEl.style.opacity='.4';
+  try{
+    await ApiClient.request(action,{token:token,photo_id:photoId,reason:reason});
+    showMsg(action==='approvePhoto'?'Foto disetujui':action==='rejectPhoto'?'Foto ditolak':'Foto dihapus', true);
+    cardEl.remove();
+  }catch(e){ showMsg(e.message,false); cardEl.style.opacity='1'; }
+}
+
+async function loadPhotos(){
+  var status  = document.getElementById('f-status').value;
+  var eventId = document.getElementById('f-event').value.trim();
+  var grid=document.getElementById('grid');
+  var spinner=document.getElementById('spinner');
+  var empty=document.getElementById('empty');
+  grid.innerHTML=''; empty.style.display='none'; spinner.style.display='block';
+  try{
+    var d=await ApiClient.request('listPhotos',{token:token,status:status,event_id:eventId,limit:60});
+    spinner.style.display='none';
+    if(!d.photos.length){ empty.style.display='block'; return; }
+    d.photos.forEach(function(p){
+      var card=document.createElement('div');
+      card.className='photo-card';
+      card.innerHTML=
+        '<img src="'+(p.thumbnail_url||'')+'" alt="" loading="lazy">'+
+        '<div class="info">'+
+          '<div class="name">'+(p.uploader_name||'Tamu')+'</div>'+
+          '<div class="meta">'+formatDate(p.uploaded_at)+' '+badge(p.moderation_status)+'</div>'+
+          '<div class="actions">'+
+            (p.moderation_status!=='APPROVED'?'<button class="btn btn-green" data-act="approvePhoto">✓</button>':'')+
+            (p.moderation_status!=='REJECTED'?'<button class="btn btn-orange" data-act="rejectPhoto">✗</button>':'')+
+            '<button class="btn btn-red" data-act="deletePhoto">🗑</button>'+
+          '</div>'+
+        '</div>';
+      card.querySelectorAll('[data-act]').forEach(function(btn){
+        btn.onclick=function(){ doAction(btn.dataset.act, p.photo_id, card); };
+      });
+      grid.appendChild(card);
+    });
+  }catch(e){ spinner.style.display='none'; showMsg(e.message,false); }
+}
+
+document.getElementById('btn-load').onclick=loadPhotos;
+loadPhotos();
+</script>
+</body>
+</html>

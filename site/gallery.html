@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Galeri Foto</title>
+<link rel="stylesheet" href="css/gallery.css">
+</head>
+<body>
+<header class="gallery-header">
+  <h1 id="event-title">📸 Galeri Foto</h1>
+  <p id="event-loc"></p>
+  <span class="photo-count" id="photo-count">0 foto</span>
+</header>
+
+<div id="spinner" class="spinner"></div>
+<div id="empty" class="empty-state" style="display:none">
+  <span>🖼️</span>
+  <p>Belum ada foto yang disetujui.</p>
+</div>
+<div class="polaroid-grid" id="grid"></div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-inner">
+    <button class="lb-close" id="lb-close">✕</button>
+    <img id="lb-img" src="" alt="">
+    <p class="sender"  id="lb-sender"></p>
+    <p class="caption" id="lb-caption"></p>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api/client.js"></script>
+<script src="js/modules/gallery/gallery.js"></script>
+</body>
+</html>

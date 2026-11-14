@@ -1,0 +1,82 @@
+/* gallery.css - Classic Polaroid */
+:root {
+  --cream: #faf6ec;
+  --white: #ffffff;
+  --frame: #ffffff;
+  --shadow: rgba(0,0,0,0.15);
+  --text: #2b2a26;
+  --muted: #6b6454;
+  --green: #3f6b4f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--cream); color: var(--text); font-family: 'Georgia', serif; min-height: 100vh; }
+
+/* Header */
+.gallery-header { text-align: center; padding: 32px 16px 16px; }
+.gallery-header h1 { font-size: clamp(1.4rem, 4vw, 2.2rem); color: var(--green); letter-spacing: .02em; }
+.gallery-header p  { color: var(--muted); font-size: .95rem; margin-top: 4px; }
+.photo-count { display: inline-block; margin-top: 8px; background: var(--green); color: #fff;
+  font-size: .8rem; padding: 3px 10px; border-radius: 20px; font-family: system-ui, sans-serif; }
+
+/* Grid Polaroid */
+.polaroid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+  padding: 24px 20px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Kartu Polaroid */
+.polaroid {
+  background: var(--frame);
+  padding: 10px 10px 36px;
+  box-shadow: 2px 4px 12px var(--shadow);
+  border-radius: 2px;
+  transform: rotate(var(--rot, 0deg));
+  transition: transform .25s ease, box-shadow .25s ease;
+  cursor: pointer;
+  animation: fadeIn .5s ease both;
+  position: relative;
+}
+.polaroid:hover { transform: rotate(0deg) scale(1.04); box-shadow: 4px 8px 24px var(--shadow); z-index: 2; }
+.polaroid img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: #eee; }
+.polaroid .caption { margin-top: 6px; font-size: .78rem; color: var(--muted); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: system-ui, sans-serif; }
+.polaroid .sender  { font-size: .85rem; font-weight: 600; color: var(--text); text-align: center; margin-top: 2px;
+  font-family: 'Georgia', serif; }
+
+/* Rotasi artistik selang-seling */
+.polaroid:nth-child(3n+1) { --rot: -1.5deg; }
+.polaroid:nth-child(3n+2) { --rot:  1deg; }
+.polaroid:nth-child(3n+3) { --rot: -0.5deg; }
+
+/* Animasi masuk */
+@keyframes fadeIn { from { opacity: 0; transform: rotate(var(--rot,0deg)) translateY(20px); } to { opacity: 1; } }
+.polaroid.new-photo { animation: popIn .6s cubic-bezier(.17,.89,.32,1.28) both; }
+@keyframes popIn { from { opacity: 0; transform: scale(.6) rotate(var(--rot,0deg)); } to { opacity: 1; } }
+
+/* Lightbox */
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
+  z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+.lightbox.open { display: flex; }
+.lightbox-inner { background: var(--frame); padding: 12px 12px 40px; max-width: 90vw; max-height: 90vh;
+  box-shadow: 0 8px 40px rgba(0,0,0,.5); position: relative; }
+.lightbox-inner img { max-width: 100%; max-height: 70vh; object-fit: contain; display: block; }
+.lightbox-inner .sender  { text-align: center; margin-top: 8px; font-size: 1rem; font-weight: 600; }
+.lightbox-inner .caption { text-align: center; font-size: .85rem; color: var(--muted); }
+.lb-close { position: absolute; top: -14px; right: -14px; background: var(--green); color: #fff;
+  border: 0; border-radius: 50%; width: 30px; height: 30px; font-size: 1.1rem; cursor: pointer; line-height: 30px; text-align: center; }
+
+/* Loading & empty */
+.empty-state { text-align: center; padding: 80px 16px; color: var(--muted); }
+.empty-state span { font-size: 3rem; display: block; margin-bottom: 12px; }
+.spinner { width: 40px; height: 40px; border: 4px solid #ddd; border-top-color: var(--green);
+  border-radius: 50%; animation: spin .8s linear infinite; margin: 60px auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsif proyektor */
+@media (min-width: 1400px) { .polaroid-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 32px; } }
+@media (max-width: 480px)  { .polaroid-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 12px; }
+  .polaroid { padding: 7px 7px 28px; } }
